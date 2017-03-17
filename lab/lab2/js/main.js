@@ -116,6 +116,7 @@ Task 6: (stretch) See if you can refocus the map to roughly the bounding box of 
 
 ===================== */
 
+
 var state = {
   position: {
     marker: null,
@@ -171,5 +172,3 @@ $(document).ready(function() {
   });
 
 });
-
-
