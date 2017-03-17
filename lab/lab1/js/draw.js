@@ -1,18 +1,18 @@
 /* =====================
 Lab 1: Leaflet Draw
 
-Task 1: Try to draw something on the map
+Task 1: Try to draw something on the map // COMPLETE
 
 Try to use one or two of the drawing tools. They should allow you to draw
 without needing any additional configuration. These shapes will not be added to
 the map. We'll fix that in the next task.
 
-Task 2: Add rectangles to map
+Task 2: Add rectangles to map // COMPLETE
 
 Add the rectangle layers to the map when they are drawn. Hint: you can use the
 addLayer function that we have used in the past.
 
-Task 3: Limit to one rectangle
+Task 3: Limit to one rectangle // COMPLETE
 
 For our application, we only want one rectangle to be displayed on the map at
 any given time. When a user draws a new rectangle, the old rectangle should be
@@ -27,7 +27,7 @@ If you get the error: "Cannot read property '_leaflet_id' of undefined", it
 may be because you are trying to remove a layer that does not yet exist. Can you
 check to see if myRectangle is defined before trying to remove it?
 
-Task 4: Add shape to sidebar
+Task 4: Add shape to sidebar // COMPLETE
 
 Let's add the shape we've created to the sidebar. In the HTML, there is a
 container with ID #shapes. Use jQuery's append function to add a new div inside
@@ -72,28 +72,52 @@ Moving your mouse outside of the circle should remove the highlighting.
 // Global Variables
 
 var myRectangle;
+var myShapes = []; // empty array to store map shapes
 
 // Initialize Leaflet Draw
 
 var drawControl = new L.Control.Draw({
   draw: {
-    polyline: false,
-    polygon: false,
-    circle: false,
-    marker: false,
+    polyline: true,
+    polygon: true,
+    circle: true,
+    marker: true,
     rectangle: true,
   }
 });
 
 map.addControl(drawControl);
 
+// This clears drawn shapes from the map:
+// _.each(demoShapes, function(shape){
+//   map.removeLayer(shape);
+// });
+// This resets the demoShapes array to empty:
+// demoShapes = [];
+
+// This is an event, similar to what we have seen in jQuery.
+// This event fires any time leaflet draw creates a new shape.
 // Run every time Leaflet draw creates a new layer
 
 map.on('draw:created', function (e) {
     var type = e.layerType; // The type of shape
     var layer = e.layer; // The Leaflet layer for the shape
     var id = L.stamp(layer); // The unique Leaflet ID for the layer
+    // _.each(myShapes, function(shape){
+    //    map.removeLayer(shape);
+    // });   // clears the map
+    // myShapes = []; // clears the array
+    // $(".shape").remove(); // This one removes the div created inside the original Shapes div
+          // $("#shapes").empty(); // This one empties the original Shapes div, accomplishes the same goal
+    myShapes.push(layer.addTo(map));  // adds created layers to the array
+    $("#shapes").append("<div class='shape' data-leaflet-id=" + layer._leaflet_id +"><h1>Current ID:" + " " + layer._leaflet_id +"</h1></div>");
 
-
+    $(".shapes").on("click", function(){
+      if (data-leaflet-id === layer._leaflet_id){
+        // rectangle.shapeOptions.color == "#000000" // trying to figure out how to change the shape color
+      }
+      else {
+      }
+    });
 
 });
