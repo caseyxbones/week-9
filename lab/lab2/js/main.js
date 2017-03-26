@@ -24,14 +24,14 @@ this logic.
     determine your location when you open it.
 2. We'll need to find some way of converting the text from an input box into
     (at least one) lat/lng pair
-3. With both an origin and a destination, we should be able to get directions
+3. With both an origin and a destinationPoint, we should be able to get directions
 4. Directions should come back in a form which can be processed into a line which
     we can then plot on our map
 
 
 *Tasks*
 
-Task 0 (optional): Prepare your tools so that you can efficiently explore this problem
+Task 0 (optional): Prepare your tools so that you can efficiently explore this problem // COMPLETE
 
 This could very well be the first complex set of API interactions you've had to
 reason about. As is the case with most programming challenges, the faster you can
@@ -45,7 +45,7 @@ I suggest Postman, which is available for free in the chrome app store. It provi
 a cleaner, easier way to test ajax calls than simply using the console.
 
 
-Task 1: Use Mapzen's 'Search' API to 'geocode' information from your input
+Task 1: Use Mapzen's 'Search' API to 'geocode' information from your input // COMPLETE
 
 First, check out the documentation here: https://mapzen.com/documentation/search/
 You might note that this task is slightly underspecified: there are multiple different
@@ -64,7 +64,7 @@ Questions you should ask yourself:
   - Can I get a lat/lng from the output?
 
 
-Task 2: Use Mapzen's 'Mobility' API to generate a route based on your origin and destination
+Task 2: Use Mapzen's 'Mobility' API to generate a route based on your origin and destinationPoint // COMPLETE
 
 The docs: https://mapzen.com/documentation/mobility/
 Again, the task is somewhat underspecified. Let's start with the simplest routing
@@ -73,7 +73,7 @@ Once you're getting a valid (as best you can tell) response from the server, mov
 to the next task.
 
 
-Task 3: Decode Mapzen's route response
+Task 3: Decode Mapzen's route response // COMPLETE
 
 Intrepid readers may have already discovered that Mapzen route responses are NOT
 in the familiar GeoJson format. Rather, they use a special encoding standardized
@@ -98,8 +98,7 @@ Hint: GeoJSON defines points as [lng, lat] instead of [lat, lng], so you may nee
 to flip your coordinates.
 
 
-Task 4: Plot your route to the map
-
+Task 4: Plot your route to the map // COMPLETE
 If you've completed step 3 with valid GeoJson (test it at geojson.io), plotting it
 to the map should be a breeze.
 
@@ -108,7 +107,7 @@ Task 5: (stretch) Try and display directions
 
 Included in the response from Mapzen is information about the steps a driver or
 or pedestrian (this depends on the 'cost' selected in your request) would have to
-take to get from your origin to your destination.
+take to get from your origin to your destinationPoint.
 
 
 Task 6: (stretch) See if you can refocus the map to roughly the bounding box of your route
@@ -116,6 +115,7 @@ Task 6: (stretch) See if you can refocus the map to roughly the bounding box of 
 
 ===================== */
 
+var originPoint;
 
 var state = {
   position: {
@@ -124,17 +124,11 @@ var state = {
   }
 };
 
-/* We'll use underscore's `once` function to make sure this only happens
- *  one time even if weupdate the position later
- */
 var goToOrigin = _.once(function(lat, lng) {
   map.flyTo([lat, lng], 14);
 });
 
-
-/* Given a lat and a long, we should create a marker, store it
- *  somewhere, and add it to the map
- */
+// Given a lat and a long, we should create a marker, store it somewhere, and add it to the map
 var updatePosition = function(lat, lng, updated) {
   if (state.position.marker) { map.removeLayer(state.position.marker); }
   state.position.marker = L.circleMarker([lat, lng], {color: "blue"});
@@ -144,20 +138,20 @@ var updatePosition = function(lat, lng, updated) {
 };
 
 $(document).ready(function() {
-  /* This 'if' check allows us to safely ask for the user's current position */
+  // This 'if' check allows us to safely ask for the user's current position
   if ("geolocation" in navigator) {
     navigator.geolocation.getCurrentPosition(function(position) {
       updatePosition(position.coords.latitude, position.coords.longitude, position.timestamp);
+      originPoint = [position.coords.latitude, position.coords.longitude];
+      console.log(originPoint);  // This is to check and make sure the output is in the form I expect, which is as Lat/Long coordinates
     });
   } else {
-    alert("Unable to access geolocation API!");
-  }
+      alert("Unable to access geolocation API!");
+    }
+});
 
-
-  /* Every time a key is lifted while typing in the #dest input, disable
-   * the #calculate button if no text is in the input
-   */
-  $('#dest').keyup(function(e) {
+  //Every time a key is lifted while typing in the #dest input, disable the #calculate button if no text is in the input
+  $('#dest').keyup(function(destinationInput) {
     if ($('#dest').val().length === 0) {
       $('#calculate').attr('disabled', true);
     } else {
@@ -165,10 +159,41 @@ $(document).ready(function() {
     }
   });
 
-  // click handler for the "calculate" button (probably you want to do something with this)
-  $("#calculate").click(function(e) {
-    var dest = $('#dest').val();
-    console.log(dest);
-  });
+// THIS CAUSES THINGS TO HAPPEN WHEN YOU ACTUALLY CLICK THE "CALCULATE ROUTE" BUTTON
+// EVERYTHING THAT FOLLOWS IS A RESULT OF THIS BUTTON CLICK
+  $("#calculate").click(function(destinationInput) {
 
-});
+    var dest = $('#dest').val(); // takes the input from the html/css
+    var destinationPoint = $.ajax('https://search.mapzen.com/v1/search?text=' + dest + 'api_key=mapzen-SxhRSHc&boundary.country=USA&size=1'); // this should limit the mapzen search results to the USA
+
+    destinationPoint.done(function(ajaxResponse) {
+      destinationCoordinates = ajaxResponse.features[0].geometry.coordinates.reverse(); // this will put the coordinates in the correct order for mapping
+      destinationMarker = L.circleMarker(destinationCoordinates, {color: "red"}); // this will create a red circle marker for the destination
+      destinationMarker.addTo(map);
+      findRoute(destinationCoordinates); // this calls the findRoute function, which is specified next
+    });
+
+    var findRoute = function() {
+      start = {'lat':originPoint[0], 'lon':originPoint[1]};
+      finish = {'lat':destinationCoordinates[0], 'lon':destinationCoordinates[1]};
+      requestText = {
+        'locations':[start, finish],
+        'costing':'auto',
+        'directions_options':{'units':'miles'}
+      };
+
+      requestJSON = JSON.stringify(requestText); // Turn the text into a string
+      route = $.ajax('https://matrix.mapzen.com/optimized_route?json=' + requestJSON + '&api_key=mapzen-bDgC2L5'); // The actual ajax call to MapZen
+
+      route.done(function(routeData) {
+        // console.log(data); // this is the actual trip object
+        var pointsCoded = routeData.trip.legs[0].shape;
+        var pointsDecoded = decode(pointsCoded);
+        var coordinatesGood = _.map(pointsDecoded, function(routeData2) {
+          return [routeData2[0], routeData2[1]];
+        });
+        var finalRoute = L.polyline(coordinatesGood, {color: "#000000"}).addTo(map);
+      }); // This closes route.done
+
+    }; // This closes var findRoute
+  }); // This closesd the click function for the calculate button
