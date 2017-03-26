@@ -60,15 +60,15 @@ var state = {
   marker1: undefined,
   marker2: undefined,
   line: undefined,
-}
+};
 
 /** ---------------
 Map configuration
 ---------------- */
 
 var map = L.map('map', {
-  center: [42.378, -71.103],
-  zoom: 14
+  center: [40.673867, -73.970126], // changed the origin to an area with which I'm actually familiar
+  zoom: 13 // changed the zoom to actually fit the area a little better given the changed origin
 });
 
 var Stamen_TonerLite = L.tileLayer('http://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
@@ -94,7 +94,6 @@ map.addControl(drawControl);
 
 /** ---------------
 Reset application
-
 Sets all of the state back to default values and removes both markers and the line from map. If you
 write the rest of your application with this in mind, you won't need to make any changes to this
 function. That being said, you are welcome to make changes if it helps.
@@ -109,20 +108,76 @@ var resetApplication = function() {
   map.removeLayer(state.line);
   state.line = undefined;
   $('#button-reset').hide();
-}
+  map.addControl(drawControl);
+};
 
 $('#button-reset').click(resetApplication);
 
 /** ---------------
 On draw
-
 Leaflet Draw runs every time a marker is added to the map. When this happens
 ---------------- */
+
+var addMarkers = function(){
+  if (state.count>1){
+    map.removeControl(drawControl);
+    $('#button-reset').show();
+
+    var originDestinationPair = {
+      "locations":[
+        {"lat":state.marker1._latlng.lat,"lon":state.marker1._latlng.lng},
+        {"lat":state.marker2._latlng.lat,"lon":state.marker2._latlng.lng}
+      ],
+      "costing":"auto",
+      "directions_options":{"units":"miles"}};
+
+    var destinationPoint = "https://matrix.mapzen.com/optimized_route?json="+JSON.stringify(originDestinationPair)+"api_key=mapzen-SxhRSHc";
+
+    $.ajax(destinationPoint).done(function(ajaxResponseData) {
+      var parsedData = JSON.parse(JSON.stringify(ajaxResponseData));
+      //console.log(parsedData.trip.legs);
+
+      var routeOptimal = [];
+      _.each(parsedData.trip.legs,function(data){
+        var DecodeData = decode(data.shape);
+        ReDeData = _.map(DecodeData,function(data){
+          return (data.reverse());
+        });
+
+        var GeoLine = {
+           "type": "FeatureCollection",
+           "features": [
+             {
+               "type": "Feature",
+               "properties": {},
+               "geometry": {
+                 "type": "LineString",
+                 "coordinates": ReDeData
+               }
+             },
+           ]};
+           state.line = L.geoJSON(GeoLine);
+           state.line.addTo(map);
+      });
+    });
+
+  }
+};
+
 
 map.on('draw:created', function (e) {
   var type = e.layerType; // The type of shape
   var layer = e.layer; // The Leaflet layer for the shape
   var id = L.stamp(layer); // The unique Leaflet ID for the
 
+  layer.addTo(map);
+
+  state.count += 1;
+
+  if (state.count==1){state.marker1 = layer;}
+  else { state.marker2 = layer;}
+
   console.log('Do something with the layer you just created', layer, layer._latlng);
+
+  Apply();
 });

@@ -183,7 +183,7 @@ $(document).ready(function() {
       };
 
       requestJSON = JSON.stringify(requestText); // Turn the text into a string
-      route = $.ajax('https://matrix.mapzen.com/optimized_route?json=' + requestJSON + '&api_key=mapzen-bDgC2L5'); // The actual ajax call to MapZen
+      route = $.ajax('https://matrix.mapzen.com/optimized_route?json=' + requestJSON + '&api_key=mapzen-SxhRSHc'); // The actual ajax call to MapZen
 
       route.done(function(routeData) {
         // console.log(data); // this is the actual trip object
